@@ -13,7 +13,7 @@ const rowLabel = (rows: number[]) => rows.length ? rows.slice(0, 12).join(', ') 
 export default function App() {
   const [view, setView] = useState<View>('overview');
   const [profile, setProfile] = useState<Profile | null>(() => { try { return JSON.parse(localStorage.getItem('qa-profile') || 'null'); } catch { return null; } });
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(() => { try { return JSON.parse(localStorage.getItem('qa-documents') || '[]'); } catch { return []; } });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
