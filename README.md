@@ -20,12 +20,12 @@ QualityAtlas does **not** infer factual accuracy. Accuracy requires comparison w
 
 Dataset and PDF parsing runs entirely in the browser. Files are not uploaded by the static app. Saved work uses browser `localStorage`; it stays on that browser profile unless the user exports it.
 
-AI is deliberately shown as **AI not configured**. The optional Express server checks `OPENAI_API_KEY` only in its server process. Secrets must never use Vite's `VITE_` prefix, because those values are bundled into browser code. The current endpoint returns no fabricated or placeholder findings.
+AI is deliberately shown as **AI not configured**. The optional Node server checks `OPENAI_API_KEY` only in its server process. Secrets must never use Vite's `VITE_` prefix, because those values are bundled into browser code. The current endpoint returns no fabricated or placeholder findings.
 
 ## Run locally
 
 ```bash
-npm install
+npm ci --omit=optional
 npm run dev
 ```
 

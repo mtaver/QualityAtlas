@@ -1,13 +1,17 @@
-import express from 'express';
+import { createServer } from 'node:http';
 
-const app = express();
-app.use(express.json({ limit: '2mb' }));
+const json = (res, status, body) => {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(body));
+};
 
-app.get('/api/ai/status', (_req, res) => res.json({ configured: Boolean(process.env.OPENAI_API_KEY), label: process.env.OPENAI_API_KEY ? 'AI configured' : 'AI not configured' }));
-
-app.post('/api/ai/extract', async (_req, res) => {
-  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured. Add OPENAI_API_KEY only to the server environment.' });
-  return res.status(501).json({ error: 'AI extraction is reserved for a reviewed server integration. No placeholder result is returned.' });
-});
-
-app.listen(process.env.PORT || 8787, () => console.log('QualityAtlas server listening on http://localhost:8787'));
+createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/api/ai/status') {
+    return json(res, 200, { configured: Boolean(process.env.OPENAI_API_KEY), label: process.env.OPENAI_API_KEY ? 'AI configured' : 'AI not configured' });
+  }
+  if (req.method === 'POST' && req.url === '/api/ai/extract') {
+    if (!process.env.OPENAI_API_KEY) return json(res, 503, { error: 'AI not configured. Add OPENAI_API_KEY only to the server environment.' });
+    return json(res, 501, { error: 'AI extraction is reserved for a reviewed server integration. No placeholder result is returned.' });
+  }
+  return json(res, 404, { error: 'Not found' });
+}).listen(process.env.PORT || 8787, () => console.log('QualityAtlas server listening on http://localhost:8787'));
