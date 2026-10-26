@@ -1,0 +1,18 @@
+import { useMemo, useState } from 'react';
+import { Network, ZoomIn, ZoomOut } from 'lucide-react';
+import type { DocumentRecord, Profile } from '../types';
+
+type Node = { id:string; label:string; type:string; x:number; y:number; detail:string };
+type Edge = { from:string; to:string };
+const colors: Record<string,string> = { dataset:'#22a27a', column:'#5f84e9', document:'#d69c37', finding:'#a778d4', rule:'#e36d58' };
+
+export function KnowledgeGraph({ profile, documents }: { profile:Profile|null; documents:DocumentRecord[] }) {
+  const [selected, setSelected] = useState<Node|null>(null); const [scale,setScale] = useState(1);
+  const {nodes,edges}=useMemo(()=>{
+    const nodes:Node[]=[]; const edges:Edge[]=[]; const cx=430,cy=280;
+    if(profile){ nodes.push({id:'dataset',label:profile.name,type:'dataset',x:cx,y:cy,detail:`${profile.rows.length} rows, ${profile.columns.length} columns`}); profile.columns.forEach((c,i)=>{ const a=(i/Math.max(profile.columns.length,1))*Math.PI*2; const id=`col-${i}`; nodes.push({id,label:c.name,type:'column',x:cx+190*Math.cos(a),y:cy+150*Math.sin(a),detail:`${c.inferredType} · ${(c.completeness*100).toFixed(1)}% complete`}); edges.push({from:'dataset',to:id}); }); profile.rules.forEach((r,i)=>{const id=`rule-${i}`, target=`col-${profile.columns.findIndex(c=>c.name===r.column)}`; nodes.push({id,label:`${r.kind} rule`,type:'rule',x:80+(i%4)*130,y:510,detail:`${r.passed}/${r.denominator} valid`}); if(target!=='col--1')edges.push({from:target,to:id});}); }
+    documents.forEach((doc,di)=>{const id=`doc-${di}`, x=profile?760:cx+180*Math.cos(di*2), y=90+di*145; nodes.push({id,label:doc.name,type:'document',x,y,detail:`${doc.pages.length} pages`}); doc.findings.forEach((f,fi)=>{const fid=`finding-${di}-${fi}`; nodes.push({id:fid,label:f.title,type:'finding',x:x+((fi%2)?110:-110),y:y+65+Math.floor(fi/2)*70,detail:f.quote}); edges.push({from:id,to:fid});});}); return {nodes,edges};
+  },[profile,documents]);
+  const map=new Map(nodes.map(n=>[n.id,n]));
+  return <section className="graph-layout"><div className="panel graph-panel"><div className="graph-toolbar"><div><p className="eyebrow">INTERACTIVE EVIDENCE MAP</p><h3>{nodes.length} nodes · {edges.length} connections</h3></div><div><button className="icon-btn" onClick={()=>setScale(Math.max(.6,scale-.1))}><ZoomOut/></button><button className="icon-btn" onClick={()=>setScale(Math.min(1.6,scale+.1))}><ZoomIn/></button></div></div>{!nodes.length?<div className="empty"><Network/><h3>Your graph is empty</h3><p>Add datasets and documents to create traceable connections.</p></div>:<div className="graph-canvas"><svg viewBox="0 0 900 620" role="img" aria-label="Knowledge graph" style={{transform:`scale(${scale})`}}>{edges.map((e,i)=>{const a=map.get(e.from),b=map.get(e.to);return a&&b?<line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y}/>:null})}{nodes.map(n=><g key={n.id} className="graph-node" onClick={()=>setSelected(n)} tabIndex={0} role="button" onKeyDown={e=>e.key==='Enter'&&setSelected(n)}><circle cx={n.x} cy={n.y} r={n.type==='dataset'||n.type==='document'?30:20} fill={colors[n.type]}/><text x={n.x} y={n.y+42} textAnchor="middle">{n.label.length>22?n.label.slice(0,20)+'…':n.label}</text></g>)}</svg></div>}</div><aside className="panel inspector"><p className="eyebrow">INSPECTOR</p>{selected?<><span className="tag" style={{borderColor:colors[selected.type]}}>{selected.type}</span><h3>{selected.label}</h3><p>{selected.detail}</p><small>Relationships in this graph are derived from uploaded evidence and configured rules.</small></>:<><Network/><h3>Select a node</h3><p>Explore its evidence and relationships.</p></>}</aside></section>;
+}
