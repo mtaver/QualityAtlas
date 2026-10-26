@@ -25,7 +25,7 @@ AI is deliberately shown as **AI not configured**. The optional Node server chec
 ## Run locally
 
 ```bash
-npm ci --omit=optional
+npm ci
 npm run dev
 ```
 
