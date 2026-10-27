@@ -27,4 +27,29 @@ objects.forEach((object, index) => { offsets.push(Buffer.byteLength(pdf)); pdf +
 const xref = Buffer.byteLength(pdf);
 pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n `).join('\n')}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
 writeFileSync(new URL('quality-report.pdf', directory), pdf);
+
+const comparisonTarget = [
+  { customer_id:'001', customer_name:' Alice ', balance:'10.0', joined:'2025-02-01' },
+  { customer_id:'002', customer_name:'Bob', balance:'12.0', joined:'01/02/2025' },
+  { customer_id:'003', customer_name:'Cara', balance:'', joined:'2025-03-01' },
+  { customer_id:'004', customer_name:'Dan', balance:'7', joined:'2025-04-01' },
+  { customer_id:'', customer_name:'Missing ID', balance:'1', joined:'2025-01-01' },
+  { customer_id:'006', customer_name:'Duplicate', balance:'1', joined:'2025-01-01' },
+  { customer_id:'006', customer_name:'Duplicate again', balance:'1', joined:'2025-01-01' }
+];
+const comparisonReference = [
+  { ref_code:'001', official_name:'alice', approved_balance:'10.5', joined_ref:'2025-02-01' },
+  { ref_code:'002', official_name:'Bobby', approved_balance:'12.6', joined_ref:'02/01/2025' },
+  { ref_code:'003', official_name:'Cara', approved_balance:'', joined_ref:'2025-03-01' },
+  { ref_code:'', official_name:'Missing ID', approved_balance:'1', joined_ref:'2025-01-01' },
+  { ref_code:'006', official_name:'Duplicate', approved_balance:'1', joined_ref:'2025-01-01' },
+  { ref_code:'006', official_name:'Duplicate again', approved_balance:'1', joined_ref:'2025-01-01' }
+];
+const targetBook = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(targetBook, XLSX.utils.json_to_sheet(comparisonTarget), 'Target data');
+XLSX.writeFile(targetBook, new URL('comparison-target.xlsx', directory).pathname.slice(1));
+const referenceBook = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(referenceBook, XLSX.utils.aoa_to_sheet([['Select the Trusted records worksheet']]), 'Read me');
+XLSX.utils.book_append_sheet(referenceBook, XLSX.utils.json_to_sheet(comparisonReference), 'Trusted records');
+XLSX.writeFile(referenceBook, new URL('comparison-reference.xlsx', directory).pathname.slice(1));
 console.log('Browser fixtures created in .test-fixtures');

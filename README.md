@@ -8,6 +8,8 @@ QualityAtlas is a local-first data quality evidence workspace. It profiles CSV a
 - Completeness, missing values, duplicate rows, duplicate identifiers, inferred types, and type consistency.
 - User-configured required, regular-expression, allowed-value, and numeric-range rules.
 - Timeliness checks against a selected date column and threshold.
+- Local reference comparison with independent target/reference identifiers, worksheet selection, column mappings, text normalization, numeric tolerance, and explicit date parsing.
+- Reference accuracy and coverage with transparent denominators, exclusions, row-level discrepancies, CSV/JSON exports, review status, and graph connections.
 - Every calculation includes its denominator and affected 1-based data-row numbers.
 - Text-based PDF extraction with exact source quotations and PDF page numbers.
 - Clear OCR warning for PDFs with insufficient extractable text.
@@ -15,6 +17,7 @@ QualityAtlas is a local-first data quality evidence workspace. It profiles CSV a
 - Search, filters, browser-local save, JSON export, and an interactive knowledge graph.
 
 QualityAtlas does **not** infer factual accuracy. Accuracy requires comparison with a trusted reference.
+Reference comparison measures agreement with the file selected by the user; QualityAtlas does not independently verify that the reference is authoritative or correct.
 
 ## Privacy and architecture
 
@@ -63,3 +66,5 @@ The optional AI endpoint cannot run on GitHub Pages. It requires a server host (
 - Duplicate identifiers = all rows whose selected non-empty identifier occurs more than once.
 - Rule validity = rows passing the configured rule ÷ total rows.
 - Timeliness = rows with a parseable date no older than the selected threshold ÷ total rows. Invalid or missing dates are reported separately.
+- Reference accuracy = matching mapped values ÷ comparable mapped values. Two blanks, missing values, ambiguous/invalid dates, unmatched records, and records with missing or duplicate identifiers are excluded and reported.
+- Comparison coverage = comparable mapped cells ÷ all mapped target cells.

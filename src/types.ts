@@ -46,3 +46,59 @@ export type Finding = {
 };
 
 export type DocumentRecord = { id: string; name: string; pages: string[]; scanned: boolean; findings: Finding[] };
+
+export type DatasetSource = { name: string; worksheet: string; rows: Row[]; columns: string[] };
+export type ComparisonRule = {
+  mode: 'exact' | 'number' | 'date';
+  trim?: boolean;
+  caseInsensitive?: boolean;
+  tolerance?: number;
+  dateFormat?: 'auto' | 'iso' | 'dmy' | 'mdy';
+};
+export type ColumnMapping = { targetColumn: string; referenceColumn: string; rule: ComparisonRule };
+export type ComparisonDetail = {
+  targetRow: number;
+  referenceRow?: number;
+  identifier: string;
+  targetColumn: string;
+  referenceColumn: string;
+  targetValue: Cell;
+  referenceValue: Cell;
+  outcome: 'mismatch' | 'missing-target' | 'missing-reference' | 'ambiguous-date' | 'invalid-value';
+  rule: string;
+};
+export type ComparisonColumnResult = {
+  targetColumn: string;
+  referenceColumn: string;
+  matches: number;
+  comparable: number;
+  totalTargetCells: number;
+  excluded: number;
+  accuracy: number | null;
+  coverage: number;
+};
+export type ComparisonReport = {
+  id: string;
+  targetName: string;
+  targetWorksheet: string;
+  referenceName: string;
+  referenceWorksheet: string;
+  targetIdentifier: string;
+  referenceIdentifier: string;
+  mappings: ColumnMapping[];
+  comparedAt: string;
+  matches: number;
+  comparable: number;
+  totalTargetCells: number;
+  excluded: number;
+  accuracy: number | null;
+  coverage: number;
+  columns: ComparisonColumnResult[];
+  details: ComparisonDetail[];
+  unmatchedTargetRows: number[];
+  missingTargetIdentifierRows: number[];
+  missingReferenceIdentifierRows: number[];
+  duplicateTargetIdentifiers: { identifier: string; rows: number[] }[];
+  duplicateReferenceIdentifiers: { identifier: string; rows: number[] }[];
+  approved: boolean;
+};

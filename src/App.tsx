@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
-import { Activity, BookOpen, Check, ChevronRight, CircleAlert, Database, Download, FileText, Filter, Network, Plus, Save, Search, ShieldCheck, Sparkles, Upload, X } from 'lucide-react';
+import { Activity, BookOpen, Check, ChevronRight, CircleAlert, Database, Download, FileText, Filter, GitCompareArrows, Network, Plus, Save, Search, ShieldCheck, Upload, X } from 'lucide-react';
 import { readDataset } from './lib/files';
 import { createProfile } from './lib/profiling';
-import type { DocumentRecord, Finding, Profile, Rule } from './types';
+import type { ComparisonReport, DocumentRecord, Finding, Profile, Rule } from './types';
 import { extractDocument } from './lib/pdf';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
+import { ReferenceComparison } from './components/ReferenceComparison';
 
-type View = 'overview' | 'datasets' | 'documents' | 'findings' | 'graph';
+type View = 'overview' | 'datasets' | 'compare' | 'documents' | 'findings' | 'graph';
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
 const rowLabel = (rows: number[]) => rows.length ? rows.slice(0, 12).join(', ') + (rows.length > 12 ? ` +${rows.length - 12}` : '') : 'None';
 
@@ -14,29 +15,31 @@ export default function App() {
   const [view, setView] = useState<View>('overview');
   const [profile, setProfile] = useState<Profile | null>(() => { try { return JSON.parse(localStorage.getItem('qa-profile') || 'null'); } catch { return null; } });
   const [documents, setDocuments] = useState<DocumentRecord[]>(() => { try { return JSON.parse(localStorage.getItem('qa-documents') || '[]'); } catch { return []; } });
+  const [comparisons, setComparisons] = useState<ComparisonReport[]>(() => { try { return JSON.parse(localStorage.getItem('qa-comparisons') || '[]'); } catch { return []; } });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
   const allFindings = documents.flatMap(d => d.findings.map(f => ({ ...f, document: d.name })));
 
-  const save = () => { if (profile) localStorage.setItem('qa-profile', JSON.stringify(profile)); localStorage.setItem('qa-documents', JSON.stringify(documents)); };
+  const save = () => { if (profile) localStorage.setItem('qa-profile', JSON.stringify(profile)); localStorage.setItem('qa-documents', JSON.stringify(documents)); localStorage.setItem('qa-comparisons', JSON.stringify(comparisons)); };
   const exportJson = () => {
-    const blob = new Blob([JSON.stringify({ profile, documents, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ profile, documents, comparisons, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'quality-atlas-export.json'; a.click(); URL.revokeObjectURL(a.href);
   };
   const updateFinding = (id: string, changes: Partial<Finding>) => setDocuments(items => items.map(doc => ({ ...doc, findings: doc.findings.map(f => f.id === id ? { ...f, ...changes } : f) })));
 
   const content = view === 'datasets' ? <DatasetView profile={profile} setProfile={setProfile} setError={setError} busy={busy} setBusy={setBusy} />
+    : view === 'compare' ? <ReferenceComparison profile={profile} reports={comparisons} setReports={setComparisons} setError={setError} />
     : view === 'documents' ? <DocumentsView documents={documents} setDocuments={setDocuments} setError={setError} busy={busy} setBusy={setBusy} />
     : view === 'findings' ? <FindingsView findings={allFindings} query={query} updateFinding={updateFinding} />
-    : view === 'graph' ? <KnowledgeGraph profile={profile} documents={documents} />
-    : <Overview profile={profile} documents={documents} onNavigate={setView} />;
+    : view === 'graph' ? <KnowledgeGraph profile={profile} documents={documents} comparisons={comparisons} />
+    : <Overview profile={profile} documents={documents} comparisons={comparisons} onNavigate={setView} />;
 
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><Activity size={21} /></div><div><strong>QualityAtlas</strong><span>Evidence workspace</span></div></div>
       <nav aria-label="Primary navigation">
-        {([['overview', Activity, 'Overview'], ['datasets', Database, 'Datasets'], ['documents', FileText, 'Documents'], ['findings', ShieldCheck, 'Findings'], ['graph', Network, 'Knowledge graph']] as const).map(([id, Icon, label]) =>
+        {([['overview', Activity, 'Overview'], ['datasets', Database, 'Datasets'], ['compare', GitCompareArrows, 'Reference comparison'], ['documents', FileText, 'Documents'], ['findings', ShieldCheck, 'Findings'], ['graph', Network, 'Knowledge graph']] as const).map(([id, Icon, label]) =>
           <button className={view === id ? 'active' : ''} onClick={() => setView(id)} key={id}><Icon size={18} /><span>{label}</span>{view === id && <ChevronRight size={15} />}</button>)}
       </nav>
       <div className="privacy-card"><ShieldCheck size={18} /><div><strong>Local by default</strong><p>Dataset and document processing runs in your browser.</p></div></div>
@@ -50,12 +53,12 @@ export default function App() {
   </div>;
 }
 
-function Overview({ profile, documents, onNavigate }: { profile: Profile | null; documents: DocumentRecord[]; onNavigate: (v: View) => void }) {
+function Overview({ profile, documents, comparisons, onNavigate }: { profile: Profile | null; documents: DocumentRecord[]; comparisons: ComparisonReport[]; onNavigate: (v: View) => void }) {
   const findings = documents.flatMap(d => d.findings);
   const completeness = profile?.columns.length ? profile.columns.reduce((sum, c) => sum + c.completeness, 0) / profile.columns.length : 0;
   return <>
     <section className="hero"><div><span className="pill">LOCAL-FIRST QUALITY INTELLIGENCE</span><h2>Turn messy evidence into<br/><em>traceable quality insight.</em></h2><p>Profile structured data, extract claims from reports, and map every metric back to its source. Nothing leaves your browser unless you deliberately configure AI.</p><div className="hero-actions"><button className="button primary" onClick={() => onNavigate('datasets')}><Upload size={17}/>Profile a dataset</button><button className="button secondary" onClick={() => onNavigate('documents')}><BookOpen size={17}/>Read a report</button></div></div><div className="hero-orbit"><div className="orbit orbit-a"/><div className="orbit orbit-b"/><div className="orbit-core"><Network size={34}/><span>Evidence<br/>connected</span></div><span className="node n1">METRICS</span><span className="node n2">RULES</span><span className="node n3">SOURCES</span></div></section>
-    <section className="stat-grid"><Stat label="Average completeness" value={profile ? pct(completeness) : '—'} detail={profile ? `${profile.rows.length} rows profiled` : 'Upload a dataset to begin'} tone="mint"/><Stat label="Quality findings" value={String(findings.length)} detail={`${findings.filter(f => f.status === 'approved').length} approved`} tone="blue"/><Stat label="Evidence sources" value={String(documents.length + (profile ? 1 : 0))} detail={`${documents.length} documents · ${profile ? 1 : 0} datasets`} tone="gold"/><Stat label="Graph connections" value={String((profile?.columns.length || 0) + findings.length)} detail="Traceable relationships" tone="violet"/></section>
+    <section className="stat-grid"><Stat label="Average completeness" value={profile ? pct(completeness) : '—'} detail={profile ? `${profile.rows.length} rows profiled` : 'Upload a dataset to begin'} tone="mint"/><Stat label="Reference accuracy" value={comparisons[0] ? (comparisons[0].accuracy === null ? 'N/A' : pct(comparisons[0].accuracy)) : '—'} detail={comparisons[0] ? `${comparisons[0].matches} ÷ ${comparisons[0].comparable} comparable` : 'Run a reference comparison'} tone="blue"/><Stat label="Evidence sources" value={String(documents.length + (profile ? 1 : 0))} detail={`${documents.length} documents · ${profile ? 1 : 0} datasets`} tone="gold"/><Stat label="Graph connections" value={String((profile?.columns.length || 0) + findings.length + comparisons.length)} detail="Traceable relationships" tone="violet"/></section>
     <section className="two-col"><div className="panel"><div className="panel-head"><div><p className="eyebrow">RECENT WORK</p><h3>Your evidence</h3></div></div>{!profile && !documents.length ? <Empty icon={Database} title="No evidence yet" text="Begin with a CSV or Excel workbook. Profiling is immediate and local." action="Upload dataset" onClick={() => onNavigate('datasets')}/> : <div className="evidence-list">{profile && <button onClick={() => onNavigate('datasets')}><Database/><div><strong>{profile.name}</strong><span>{profile.rows.length} rows · {profile.columns.length} columns</span></div><ChevronRight/></button>}{documents.map(d => <button key={d.id} onClick={() => onNavigate('documents')}><FileText/><div><strong>{d.name}</strong><span>{d.pages.length} pages · {d.findings.length} findings</span></div><ChevronRight/></button>)}</div>}</div><div className="panel principle"><p className="eyebrow">MEASUREMENT PRINCIPLE</p><blockquote>“Quality is evidence, not a claim.”</blockquote><p>QualityAtlas reports what can be calculated or quoted. Factual accuracy requires an authoritative reference and is never inferred from the dataset alone.</p></div></section>
   </>;
 }
